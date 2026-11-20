@@ -52,16 +52,17 @@ D.ingest = (function () {
     };
   }
 
-  // Formulario de la web (doiser.com). Campos planos.
+  // Formulario «Solicitar presupuesto» de doiser.com: nombre y apellidos, email, teléfono y comentarios.
+  // El servicio se deduce de la página desde la que se envía.
   function desdeWeb(p, servicios) {
     const l = base('web', p);
-    l.campana = p.form || 'Formulario web';
-    l.servicio = servicioDesdeTexto(p.servicio, servicios);
-    l.contacto = { nombre: p.nombre || '', apellidos: p.apellidos || '', telefono: u.telefono(p.telefono), email: (p.email || '').trim().toLowerCase() };
-    l.empresa = { nombre: p.empresa || '', tipoCliente: tipoCliente(p.tipo_cliente), provincia: provinciaValida(p.provincia), poblacion: p.poblacion || '' };
-    if (p.trabajadores) l.respuestas.trabajadores = Number(p.trabajadores);
-    l.comentario = p.comentario || '';
+    l.campana = p.pagina || 'doiser.com';
+    l.servicio = servicioDesdeTexto(p.servicio || p.pagina, servicios);
+    const full = String(p.nombre_apellidos || '').trim().split(/\s+/);
+    l.contacto = { nombre: full[0] || '', apellidos: full.slice(1).join(' '), telefono: u.telefono(p.telefono), email: (p.email || '').trim().toLowerCase() };
+    l.comentario = p.comentarios || '';
     l.dispositivo = p.dispositivo || '';
+    l.rgpd = !!p.acepta_rgpd; l.newsletter = !!p.newsletter;
     l.utm = { source: p.utm_source || '', medium: p.utm_medium || '', campaign: p.utm_campaign || '' };
     return l;
   }
@@ -111,15 +112,13 @@ D.ingest = (function () {
     const lead = LECTORES[fuente](payload, state.servicios);
     lead.id = 'L' + (++state.seq.lead);
     const avisos = [];
-    if (!lead.servicio) avisos.push('No se reconoce el servicio: hay que asignarlo a mano.');
-    if (!u.telefonoValido(lead.contacto.telefono)) avisos.push('Teléfono no válido o ausente.');
-    if (!lead.empresa.provincia) avisos.push('Falta la provincia.');
-    if (!lead.empresa.tipoCliente) avisos.push('Falta el tipo de cliente.');
+    if (!lead.servicio) avisos.push('Servicio sin identificar');
+    if (!u.telefonoValido(lead.contacto.telefono)) avisos.push('Teléfono no válido');
     // Duplicado: mismo teléfono o email y mismo servicio en los últimos 30 días.
     const limite = Date.now() - 30 * 864e5;
     const dup = state.leads.find(x => x.servicio === lead.servicio && new Date(x.creado).getTime() > limite &&
       ((lead.contacto.telefono && x.contacto.telefono === lead.contacto.telefono) || (lead.contacto.email && x.contacto.email === lead.contacto.email)));
-    if (dup) { lead.duplicadoDe = dup.id; avisos.push(`Posible duplicado de ${dup.id}.`); }
+    if (dup) { lead.duplicadoDe = dup.id; avisos.push(`Posible duplicado de ${dup.id}`); }
     lead.historial.push({ fecha: lead.creado, texto: `Entrada por ${D.FUENTES[fuente]} (${lead.campana})` });
     avisos.forEach(a => lead.historial.push({ fecha: lead.creado, texto: 'Aviso: ' + a }));
     lead.avisos = avisos;

@@ -4,8 +4,13 @@ D.views = D.views || {};
 D.act = D.act || {};
 
 D.ui = {
-  badgeEstado(e) { const x = D.ESTADOS[e] || { label: e, color: 'gris' }; return `<span class="badge b-${x.color}">${x.label}</span>`; },
-  fuente(f) { return `<span class="src ${f}">${{ web: 'WEB', meta: 'META', google: 'GOOGLE', manual: 'MANUAL' }[f] || f}</span>`; },
+  badgeEstado(e) {
+    const x = D.ESTADOS[e] || { label: e, color: 'gris' };
+    const c = { azul: 'blue', rojo: 'red', ambar: 'amber', violeta: 'violet', verde: 'green', gris: 'grey' }[x.color];
+    return `<span class="pill p-${c}">${x.label}</span>`;
+  },
+  fuente(f) { return `<span class="tag">${{ web: 'Web', meta: 'Meta', google: 'Google', manual: 'Manual' }[f] || f}</span>`; },
+  iniciales(l) { return ((l.contacto.nombre[0] || '') + (l.contacto.apellidos[0] || '')).toUpperCase() || '?'; },
   toast(msg) {
     document.querySelectorAll('.toast').forEach(x => x.remove());
     const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
@@ -14,7 +19,7 @@ D.ui = {
   modal(titulo, html) {
     D.ui.cerrarModal();
     const m = document.createElement('div'); m.className = 'modal-bg'; m.id = 'modal';
-    m.innerHTML = `<div class="modal"><div class="top"><h2>${titulo}</h2><button class="btn" data-action="cerrarModal">Cerrar</button></div>${html}</div>`;
+    m.innerHTML = `<div class="modal"><div class="mh"><h2 style="margin:0">${titulo}</h2><button class="btn ghost" data-action="cerrarModal">✕</button></div>${html}</div>`;
     m.addEventListener('click', e => { if (e.target === m) D.ui.cerrarModal(); });
     document.body.appendChild(m);
   },
@@ -23,10 +28,7 @@ D.ui = {
 };
 D.act.cerrarModal = () => D.ui.cerrarModal();
 
-D.nav = [
-  ['resumen', 'Resumen'], ['entrada', 'Simular entrada'], ['bandeja', 'Bandeja de leads'],
-  ['proveedores', 'Proveedores'], ['facturacion', 'Facturación'], ['config', 'Configuración']
-];
+D.nav = [['resumen', 'Inicio'], ['bandeja', 'Leads'], ['entrada', 'Nuevo lead'], ['proveedores', 'Proveedores'], ['facturacion', 'Facturación'], ['config', 'Ajustes']];
 
 D.go = function (hash) { if (location.hash === hash) D.render(); else location.hash = hash; };
 
@@ -34,13 +36,10 @@ D.render = function () {
   const h = location.hash.replace(/^#/, '') || 'resumen';
   const [vista, param] = h.startsWith('lead-') ? ['lead', h.slice(5)] : [h, ''];
   const st = D.store.get();
-  const porLlamar = st.leads.filter(l => ['nuevo', 'no_contesta', 'pendiente'].includes(l.estado)).length;
-  const porAsignar = st.leads.filter(l => l.estado === 'cualificado').length;
+  const pendientes = st.leads.filter(l => ['nuevo', 'no_contesta', 'pendiente', 'cualificado'].includes(l.estado)).length;
   const activa = vista === 'lead' ? 'bandeja' : vista;
-  document.getElementById('nav').innerHTML = D.nav.map(([k, t]) => {
-    const cnt = k === 'bandeja' ? `<span class="cnt" title="Por llamar / por asignar">${porLlamar} · ${porAsignar}</span>` : '';
-    return `<a href="#${k}" class="${activa === k ? 'on' : ''}">${t}${cnt}</a>`;
-  }).join('');
+  document.getElementById('nav').innerHTML = D.nav.map(([k, t]) =>
+    `<a href="#${k}" class="${activa === k ? 'on' : ''}">${t}${k === 'bandeja' && pendientes ? `<span class="cnt">${pendientes}</span>` : ''}</a>`).join('');
   const v = D.views[vista] || D.views.resumen;
   const main = document.getElementById('main');
   main.innerHTML = v.render(param);

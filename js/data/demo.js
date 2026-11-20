@@ -8,24 +8,19 @@ D.demo = (function () {
     const nombreCompleto = `${d.nombre} ${d.apellidos}`.trim();
     if (fuente === 'web') {
       return {
-        form: 'presupuesto', servicio: servicio.nombre,
-        nombre: d.nombre, apellidos: d.apellidos, email: d.email, telefono: d.telefono,
-        empresa: d.empresa, tipo_cliente: d.tipoCliente, provincia: d.provincia, poblacion: d.poblacion || '',
-        trabajadores: d.trabajadores ?? '', comentario: d.comentario || '',
-        dispositivo: d.dispositivo || 'movil', utm_source: 'google', utm_medium: 'organic', utm_campaign: ''
+        pagina: 'doiser.com/' + servicio.id.replace(/_/g, '-') + '/', servicio: servicio.nombre,
+        nombre_apellidos: nombreCompleto, email: d.email, telefono: d.telefono, comentarios: d.comentario || '',
+        acepta_rgpd: true, newsletter: !!d.newsletter, dispositivo: d.dispositivo || 'movil'
       };
     }
     if (fuente === 'meta') {
       const fd = [
         { name: 'full_name', values: [nombreCompleto] },
         { name: 'phone_number', values: [d.telefono] },
-        { name: 'email', values: [d.email] },
-        { name: 'provincia', values: [d.provincia] },
-        { name: 'tipo_de_cliente', values: [d.tipoCliente] }
+        { name: 'email', values: [d.email] }
       ];
-      if (d.empresa) fd.push({ name: 'company_name', values: [d.empresa] });
-      if (d.trabajadores) fd.push({ name: 'n.º_de_trabajadores', values: [String(d.trabajadores)] });
-      Object.entries(d.extra || {}).forEach(([k, v]) => fd.push({ name: k, values: [String(v)] }));
+      // Algunos anuncios añaden una pregunta propia de la línea.
+      Object.entries(d.extra || {}).forEach(([k, v]) => { if (v !== '' && v !== undefined) fd.push({ name: k, values: [String(v)] }); });
       return {
         id: String(Math.floor(1e14 + Math.random() * 9e14)),
         created_time: d.fecha || new Date().toISOString(),
@@ -37,12 +32,8 @@ D.demo = (function () {
     const ucd = [
       { column_id: 'FULL_NAME', string_value: nombreCompleto },
       { column_id: 'PHONE_NUMBER', string_value: d.telefono },
-      { column_id: 'EMAIL', string_value: d.email },
-      { column_name: 'Provincia', string_value: d.provincia },
-      { column_name: 'Tipo de cliente', string_value: d.tipoCliente }
+      { column_id: 'EMAIL', string_value: d.email }
     ];
-    if (d.empresa) ucd.push({ column_id: 'COMPANY_NAME', string_value: d.empresa });
-    if (d.trabajadores) ucd.push({ column_name: 'Nº de trabajadores', string_value: String(d.trabajadores) });
     return {
       lead_id: 'TeSter-' + Math.random().toString(36).slice(2, 10), api_version: '1.0', form_id: 40000000000 + Math.floor(Math.random() * 1e6),
       campaign_id: 20000000000 + Math.floor(Math.random() * 1e6), campaign_name: `Search ${servicio.nombre}`,
@@ -92,20 +83,23 @@ D.demo = (function () {
         empresa: tipo === 'Particular' ? '' : D.NEGOCIOS[Math.floor(rnd() * D.NEGOCIOS.length)],
         tipoCliente: rnd() < 0.15 ? '' : tipo,
         provincia: rnd() < 0.12 ? '' : elegir(rnd, provPesos),
-        trabajadores: rnd() < 0.5 ? undefined : (tipo === 'Autónomo' ? 1 : 3 + Math.floor(rnd() * 20)),
-        fecha: fecha.toISOString()
+        fecha: fecha.toISOString(),
+        comentario: rnd() < 0.3 ? D.demo.COMENTARIOS[Math.floor(rnd() * D.demo.COMENTARIOS.length)] : '',
+        extra: fuente === 'meta' ? D.demo.preguntaMeta(s, rnd) : {}
       };
       const lead = D.ingest.recibir(fuente, payload(fuente, d, s), state);
       lead.creado = fecha.toISOString();
       lead.historial.forEach(h => { h.fecha = lead.creado; });
       lead.responsable = elegir(rnd, [['Dani', 1], ['Joan', 1], ['Marcel', 1]]);
+      lead._perfil = { tipo, empresa: d.empresa };
       state.leads.push(lead);
       return { lead, s };
     }
 
     function completar(lead, s) {
       if (!lead.empresa.provincia) lead.empresa.provincia = elegir(rnd, provPesos);
-      if (!lead.empresa.tipoCliente) lead.empresa.tipoCliente = s.tiposCliente[0];
+      if (!lead.empresa.tipoCliente) lead.empresa.tipoCliente = lead._perfil.tipo;
+      if (!lead.empresa.nombre && lead._perfil.empresa) lead.empresa.nombre = lead._perfil.empresa;
       for (const q of s.preguntas) if (lead.respuestas[q.id] === undefined || lead.respuestas[q.id] === '') {
         if (q.obligatorio || rnd() < 0.6) lead.respuestas[q.id] = respuestaAleatoria(rnd, q, lead.empresa.tipoCliente);
       }
@@ -162,8 +156,16 @@ D.demo = (function () {
       else if (r < 0.93) { completar(lead, s); llamar(lead, fGest, 'ok'); lead.estado = 'cualificado'; lead.cualificado = fGest.toISOString(); }
       else { llamar(lead, fGest, 'ok'); lead.estado = 'invalido'; lead.motivoInvalido = 'No necesita el servicio'; }
     }
+    state.leads.forEach(l => { delete l._perfil; });
     state.leads.sort((a, b) => b.creado.localeCompare(a.creado));
   }
 
-  return { payload, generar, respuestaAleatoria, elegir };
+  // Pregunta propia que llevan algunos formularios de Meta.
+  function preguntaMeta(s, rnd = Math.random) {
+    const q = s.preguntas.find(x => ['que_eres', 'sector', 'negocio', 'tipo_web'].includes(x.id));
+    if (!q) return {};
+    return { [q.id]: q.opciones ? q.opciones[Math.floor(rnd() * q.opciones.length)] : 'Comercio' };
+  }
+  const COMENTARIOS = ['Quiero comparar precios', 'Llamadme por la tarde', 'Es urgente', 'Ahora tengo otro proveedor y quiero cambiar', 'Somos una empresa pequeña'];
+  return { payload, generar, respuestaAleatoria, elegir, preguntaMeta, COMENTARIOS };
 })();

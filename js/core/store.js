@@ -16,7 +16,7 @@ D.MOTIVOS_INVALIDO = ['Datos incorrectos', 'No necesita el servicio', 'No locali
 D.MAX_INTENTOS = 3;
 
 D.store = (function () {
-  const KEY = 'doiser-gestor-demo-v1';
+  const KEY = 'doiser-gestor-demo-v2';
   let state = null;
 
   function vacio() {
@@ -118,7 +118,8 @@ D.ops = (function () {
     lead.contacto.telefono = u.telefono(lead.contacto.telefono);
     const s = D.store.servicio(lead.servicio);
     const faltan = D.matching.faltanObligatorios(lead, s);
-    if (!faltan.length && lead.contactado && ['nuevo', 'no_contesta', 'pendiente'].includes(lead.estado)) {
+    const contactado = lead.contactado || lead.llamadas.some(c => c.resultado === 'ok');
+    if (!faltan.length && contactado && ['nuevo', 'no_contesta', 'pendiente'].includes(lead.estado)) {
       lead.estado = 'cualificado'; lead.cualificado = new Date().toISOString();
       log(lead, 'Cualificado: datos completos');
     } else log(lead, 'Datos actualizados');

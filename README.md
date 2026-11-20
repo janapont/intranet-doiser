@@ -6,19 +6,19 @@ Este prototipo junta en una sola herramienta todo el proceso de un lead: la entr
 
 ## Cómo abrirlo
 
-Basta con abrir `index.html` en el navegador. No hace falta instalar nada ni compilar. Los cambios se guardan en el propio navegador; para volver a empezar, ve a *Configuración → Reiniciar demo*.
+Basta con abrir `index.html` en el navegador. No hace falta instalar nada ni compilar. Los cambios se guardan en el propio navegador; para volver a empezar, ve a *Ajustes → Reiniciar*.
 
 ## Qué hay dentro
 
 | Pantalla | Para qué sirve |
 |---|---|
-| Resumen | Indicadores del mes: leads por estado y por fuente, importe facturable y motivos por los que no se envía al máximo de proveedores. |
-| Simular entrada | Formulario del cliente. Genera el mensaje con el formato real de Meta (`field_data`), Google Ads (`user_column_data`) o la web, y lo procesa igual que en producción. |
-| Bandeja | Lista única de leads de todas las fuentes, agrupada en: por llamar, por enviar, enviados e inválidos. |
-| Ficha del lead | Registro de la llamada (con WhatsApp automático si no contesta), cuestionario del servicio, propuesta de proveedores con su puntuación, envío y mensaje que recibe el proveedor. |
-| Proveedores | Precio por servicio, zonas, límites, estado de cobro y calidad. Si cambias algo, la propuesta se recalcula. |
-| Facturación | Cierre mensual por proveedor, con el detalle que se enviaría a Holded y la simulación del cobro. |
-| Configuración | Pesos del algoritmo, envío automático, WhatsApp y cuestionarios por servicio. |
+| Inicio | Leads del mes, pendientes, importe facturable y dónde faltan proveedores. |
+| Leads | Bandeja única de leads, sin importar de dónde vengan. |
+| Ficha del lead | Llamar, cualificar con el cuestionario del servicio y enviar a los proveedores propuestos. |
+| Nuevo lead | Simula el formulario corto que rellena el cliente (web, Meta o Google Ads). |
+| Proveedores | Precio por servicio, zonas, límites, cobro y calidad. Se pueden editar. |
+| Facturación | Cierre mensual, envío a Holded y cobro (simulados). |
+| Ajustes | Pesos del algoritmo, automatismos y cuestionarios. |
 
 ## Algoritmo de selección
 

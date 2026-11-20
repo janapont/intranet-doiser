@@ -1,84 +1,78 @@
-// Simulador de entradas: genera el payload que enviaría cada fuente y lo pasa por la ingesta real.
+// Nuevo lead: simula el formulario que rellena el cliente en cada canal.
 D.views.entrada = {
-  fuente: 'meta',
+  fuente: 'web',
+  servicio: 'prl',
   ultimo: null,
   render() {
     const st = D.store.get(), u = D.u, f = this.fuente;
-    const explicacion = {
-      meta: 'Un anuncio de Facebook/Instagram con formulario instantáneo. Meta envía el lead por webhook (directamente o reenviado por GoHighLevel) con los campos en <code>field_data</code>.',
-      web: 'El formulario «Pide presupuesto» de doiser.com. Hace un POST con los campos del formulario.',
-      google: 'Un formulario de clientes potenciales de Google Ads. Google envía el lead por webhook con los campos en <code>user_column_data</code>.'
-    }[f];
-    const opt = (arr, sel) => arr.map(x => `<option ${x === sel ? 'selected' : ''}>${u.esc(x)}</option>`).join('');
+    const s = D.store.servicio(this.servicio);
     const ult = this.ultimo && D.store.lead(this.ultimo);
+    const selServ = `<select data-change="entradaServicio" style="width:auto">${st.servicios.map(x => `<option value="${x.id}" ${x.id === s.id ? 'selected' : ''}>${u.esc(x.nombre)}</option>`).join('')}</select>`;
+    const qMeta = f === 'meta' ? s.preguntas.find(x => ['que_eres', 'sector', 'negocio', 'tipo_web'].includes(x.id)) : null;
+
+    let form;
+    if (f === 'web') {
+      form = `<div class="webform"><h3>SOLICITAR PRESUPUESTO</h3>
+        <input name="nombre_apellidos" placeholder="Nombre y apellidos *">
+        <input name="email" placeholder="Email *">
+        <input name="telefono" placeholder="Teléfono *">
+        <textarea name="comentarios" rows="3" placeholder="Comentarios"></textarea>
+        <label class="check"><input type="checkbox" name="rgpd" checked> He leído y acepto la Política de Protección de Datos</label>
+        <label class="check"><input type="checkbox" name="newsletter"> Quiero recibir las novedades de Doiser</label>
+        <button class="btn cta big" data-action="entradaEnviar">Enviar solicitud</button></div>`;
+    } else {
+      form = `<div class="metaform"><div class="hd"><div class="avatar" style="width:36px;height:36px;font-size:14px">d</div>
+          <div><b>Doiser</b><div class="sub">${f === 'meta' ? 'Formulario instantáneo · Facebook' : 'Formulario de Google Ads'}</div></div></div>
+        <label>Nombre completo</label><input name="nombre_apellidos">
+        <label>Teléfono</label><input name="telefono">
+        <label>Correo electrónico</label><input name="email">
+        ${qMeta ? `<label>${u.esc(qMeta.label)}</label>${qMeta.opciones ? `<select name="q_${qMeta.id}">${qMeta.opciones.map(o => `<option>${u.esc(o)}</option>`).join('')}</select>` : `<input name="q_${qMeta.id}">`}` : ''}
+        <button class="btn primary big" style="width:100%;margin-top:6px" data-action="entradaEnviar">Enviar</button></div>`;
+    }
+
     return `
-      <div class="head"><div><h1>Simular la entrada de un lead</h1>
-        <p>Rellena un formulario como si fueras el cliente. Se genera el mensaje con el formato real de cada plataforma y entra en la bandeja por el mismo camino que lo haría en producción.</p></div></div>
-      <div class="tabs">${['meta', 'web', 'google'].map(k => `<span class="tab ${k === f ? 'on' : ''}" data-action="entradaFuente" data-f="${k}">${D.FUENTES[k]}</span>`).join('')}</div>
-      ${ult ? `<div class="alert ok">Lead <b>${ult.id}</b> recibido y en la bandeja. ${(ult.avisos || []).length ? 'Avisos: ' + ult.avisos.map(u.esc).join(' ') : 'Sin avisos.'} <a href="#lead-${ult.id}">Abrir ficha →</a></div>` : ''}
-      <div class="grid2">
-        <div class="panel"><h2>Formulario del cliente</h2><p class="sub">${explicacion}</p>
-          <form id="fEntrada" class="form">
-            <label class="f full">Servicio
-              <select name="servicio">${st.servicios.map(s => `<option value="${s.id}">${u.esc(s.nombre)}</option>`).join('')}</select></label>
-            <label class="f">Nombre<input name="nombre" value="Laura"></label>
-            <label class="f">Apellidos<input name="apellidos" value="Martín Serra"></label>
-            <label class="f">Teléfono<input name="telefono" value="612345678"></label>
-            <label class="f">Email<input name="email" value="laura.martin@example.com"></label>
-            <label class="f">Empresa<input name="empresa" value="Reformas Delta"></label>
-            <label class="f">Tipo de cliente<select name="tipoCliente"><option value="">(no lo indica)</option>${opt(D.TIPOS_CLIENTE, 'Empresa')}</select></label>
-            <label class="f">Provincia<select name="provincia"><option value="">(no lo indica)</option>${opt(D.PROVINCIAS, 'Barcelona')}</select></label>
-            <label class="f">Nº de trabajadores<input name="trabajadores" type="number" min="0" value="8"></label>
-            <label class="f full">Comentario<textarea name="comentario" rows="2">Quiero comparar precios.</textarea></label>
-          </form>
-          <div class="btns" style="margin-top:12px">
-            <button class="btn" data-action="entradaAleatorio">Datos aleatorios</button>
-            <button class="btn pri" data-action="entradaEnviar">Enviar lead</button>
-          </div>
-        </div>
-        <div class="panel"><h2>Lo que llega al sistema</h2><p class="sub">Mensaje tal como lo enviaría ${D.FUENTES[f]}.</p><div id="payload"></div></div>
+      <div class="top"><h1>Nuevo lead</h1>
+        <div class="seg">${[['web', 'Web'], ['meta', 'Meta'], ['google', 'Google Ads']].map(([k, t]) => `<span class="${k === f ? 'on' : ''}" data-action="entradaFuente" data-f="${k}">${t}</span>`).join('')}</div></div>
+      ${ult ? `<div class="card row" style="justify-content:space-between;padding:14px 20px">
+        <span><span class="pill p-green">Recibido</span> &nbsp;<b>${u.esc(ult.contacto.nombre)} ${u.esc(ult.contacto.apellidos)}</b> <span class="muted">· ${u.esc(D.store.servicio(ult.servicio)?.nombre || '')}</span>
+        ${(ult.avisos || []).length ? `<span class="pill p-amber" style="margin-left:6px">${u.esc(ult.avisos.join(' · '))}</span>` : ''}</span>
+        <a class="btn" href="#lead-${ult.id}">Abrir</a></div>` : ''}
+      <div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:20px">
+          <span class="muted">${f === 'web' ? 'Página' : f === 'meta' ? 'Anuncio' : 'Campaña'} ${selServ}</span>
+          <button class="btn ghost" data-action="entradaAleatorio">Rellenar datos de prueba</button></div>
+        <form id="fEntrada" onsubmit="return false">${form}</form>
       </div>`;
   },
   datos() {
-    const fd = new FormData(document.getElementById('fEntrada'));
-    const d = Object.fromEntries(fd.entries());
-    d.trabajadores = d.trabajadores === '' ? undefined : Number(d.trabajadores);
-    return d;
-  },
-  payload() {
-    const d = this.datos();
-    const s = D.store.servicio(d.servicio);
-    return D.demo.payload(this.fuente, d, s);
-  },
-  pintar() { const el = document.getElementById('payload'); if (el) el.innerHTML = D.ui.json(this.payload()); },
-  after() {
-    this.pintar();
-    document.getElementById('fEntrada').addEventListener('input', () => this.pintar());
+    const f = document.getElementById('fEntrada');
+    const d = Object.fromEntries(new FormData(f).entries());
+    const partes = (d.nombre_apellidos || '').trim().split(/\s+/);
+    const extra = {};
+    Object.keys(d).filter(k => k.startsWith('q_')).forEach(k => { extra[k.slice(2)] = d[k]; });
+    return { nombre: partes[0] || '', apellidos: partes.slice(1).join(' '), email: d.email || '', telefono: d.telefono || '', comentario: d.comentarios || '', newsletter: !!d.newsletter, rgpd: !!d.rgpd, extra };
   }
 };
 
-D.act.entradaFuente = el => { D.views.entrada.fuente = el.dataset.f; D.views.entrada.ultimo = null; D.render(); };
+D.act.entradaFuente = el => { D.views.entrada.fuente = el.dataset.f; D.render(); };
+D.act.entradaServicio = el => { D.views.entrada.servicio = el.value; D.render(); };
 D.act.entradaAleatorio = () => {
-  const f = document.getElementById('fEntrada'), r = Math.random, pick = a => a[Math.floor(r() * a.length)];
+  const f = document.getElementById('fEntrada'), pick = a => a[Math.floor(Math.random() * a.length)];
   const n = pick(D.NOMBRES), ap = pick(D.APELLIDOS) + ' ' + pick(D.APELLIDOS);
-  f.servicio.value = pick(D.store.get().servicios).id;
-  f.nombre.value = n; f.apellidos.value = ap;
-  f.telefono.value = '6' + String(Math.floor(r() * 1e8)).padStart(8, '0');
+  f.nombre_apellidos.value = n + ' ' + ap;
+  f.telefono.value = '6' + String(Math.floor(Math.random() * 1e8)).padStart(8, '0');
   f.email.value = D.u.norm(n) + '.' + D.u.norm(ap.split(' ')[0]) + '@example.com';
-  f.empresa.value = pick(D.NEGOCIOS);
-  f.tipoCliente.value = r() < 0.15 ? '' : pick(D.TIPOS_CLIENTE);
-  f.provincia.value = r() < 0.15 ? '' : pick(['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Málaga', 'Vizcaya', 'Zaragoza', 'A Coruña', 'Murcia', 'Las Palmas']);
-  f.trabajadores.value = r() < 0.4 ? '' : 1 + Math.floor(r() * 30);
-  f.comentario.value = '';
-  D.views.entrada.pintar();
+  if (f.comentarios) f.comentarios.value = Math.random() < 0.5 ? pick(D.demo.COMENTARIOS) : '';
 };
 D.act.entradaEnviar = () => {
   const v = D.views.entrada, st = D.store.get();
-  const lead = D.ingest.recibir(v.fuente, v.payload(), st);
+  const d = v.datos();
+  if (!d.nombre || !d.telefono) { D.ui.toast('Nombre y teléfono son obligatorios'); return; }
+  if (v.fuente === 'web' && !d.rgpd) { D.ui.toast('Hay que aceptar la política de datos'); return; }
+  const lead = D.ingest.recibir(v.fuente, D.demo.payload(v.fuente, d, D.store.servicio(v.servicio)), st);
   lead.responsable = st.config.usuario;
   st.leads.unshift(lead);
   D.store.guardar();
   v.ultimo = lead.id;
   D.render();
-  D.ui.toast(`Lead ${lead.id} recibido`);
 };
