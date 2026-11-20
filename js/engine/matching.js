@@ -94,8 +94,9 @@ D.matching = (function () {
     const candidatos = pasan.map(({ p, cfg, c }) => {
       const s = {
         precio: pMax > 0 ? cfg.cpl / pMax : 1,
-        calidad: u.clamp(1 - p.invalidacion / 0.2),
-        conversion: u.clamp(p.contratacion / 0.25),
+        // Sin histórico (proveedor nuevo): valor neutro.
+        calidad: p.invalidacion == null ? 0.5 : u.clamp(1 - p.invalidacion / 0.2),
+        conversion: p.contratacion == null ? 0.5 : u.clamp(p.contratacion / 0.25),
         reparto: p.limMes ? u.clamp(1 - c.mes / p.limMes) : u.clamp(1 - c.mes / 400),
         prioridad: (PRIORIDAD[cfg.prioridad] || 0.4) * 0.6 + (IMPORTANCIA[p.importancia] || 0.4) * 0.4
       };
