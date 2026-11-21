@@ -4,33 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Doiser · Gestor de leads (prototipo)</title>
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=0.5">
 </head>
 <body>
 <div class="app">
   <aside class="side">
     <div class="logo">doiser<span>•</span></div>
     <nav class="nav" id="nav"></nav>
-    <div class="foot">Demo · datos ficticios</div>
+    <div class="foot">Demo · datos ficticios<br><span id="version"></span></div>
   </aside>
   <main class="main" id="main"></main>
 </div>
 <!-- Orden de carga: datos → utilidades → motor → estado → pantallas → arranque -->
-<script src="js/data/provincias.js"></script>
-<script src="js/data/seed.js"></script>
-<script src="js/core/util.js"></script>
-<script src="js/engine/ingest.js"></script>
-<script src="js/engine/matching.js"></script>
-<script src="js/engine/billing.js"></script>
-<script src="js/data/demo.js"></script>
-<script src="js/core/store.js"></script>
-<script src="js/views/resumen.js"></script>
-<script src="js/views/entrada.js"></script>
-<script src="js/views/bandeja.js"></script>
-<script src="js/views/lead.js"></script>
-<script src="js/views/proveedores.js"></script>
-<script src="js/views/facturacion.js"></script>
-<script src="js/views/config.js"></script>
-<script src="js/app.js"></script>
+<script src="js/version.js?v=0.5"></script>
+<script src="js/data/provincias.js?v=0.5"></script>
+<script src="js/data/seed.js?v=0.5"></script>
+<script src="js/core/util.js?v=0.5"></script>
+<script src="js/engine/ingest.js?v=0.5"></script>
+<script src="js/engine/matching.js?v=0.5"></script>
+<script src="js/engine/billing.js?v=0.5"></script>
+<script src="js/data/demo.js?v=0.5"></script>
+<script src="js/core/store.js?v=0.5"></script>
+<script src="js/views/resumen.js?v=0.5"></script>
+<script src="js/views/entrada.js?v=0.5"></script>
+<script src="js/views/bandeja.js?v=0.5"></script>
+<script src="js/views/lead.js?v=0.5"></script>
+<script src="js/views/proveedores.js?v=0.5"></script>
+<script src="js/views/facturacion.js?v=0.5"></script>
+<script src="js/views/config.js?v=0.5"></script>
+<script src="js/app.js?v=0.5"></script>
 </body>
 </html>

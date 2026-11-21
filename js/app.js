@@ -64,4 +64,7 @@ document.addEventListener('click', e => {
 });
 
 window.addEventListener('hashchange', () => { D.ui.cerrarModal(); D.render(); window.scrollTo(0, 0); });
-window.addEventListener('DOMContentLoaded', () => { D.store.cargar(); D.render(); });
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('version').textContent = `v${D.VERSION.num} · ${D.VERSION.fecha}`;
+  D.store.cargar(); D.render();
+});
