@@ -16,7 +16,7 @@ D.MOTIVOS_INVALIDO = ['Datos incorrectos', 'No necesita el servicio', 'No locali
 D.MAX_INTENTOS = 3;
 
 D.store = (function () {
-  const KEY = 'doiser-gestor-demo-v2';
+  const KEY = 'doiser-gestor-demo-v3';
   let state = null;
 
   function vacio() {
@@ -25,7 +25,7 @@ D.store = (function () {
       servicios: D.u.copia(D.SEED_SERVICIOS),
       proveedores: D.u.copia(D.SEED_PROVEEDORES),
       pesos: D.u.copia(D.SEED_PESOS),
-      config: { modoAuto: false, whatsapp: true, usuario: 'Dani' },
+      config: { modoAuto: false, whatsapp: true, waBienvenida: true, usuario: 'Dani' },
       leads: [], facturas: [],
       seq: { lead: 1000, factura: 0 }
     };
@@ -116,6 +116,7 @@ D.ops = (function () {
     lead.respuestas = Object.assign({}, lead.respuestas, datos.respuestas || {});
     if (datos.comentario !== undefined) lead.comentario = datos.comentario;
     lead.contacto.telefono = u.telefono(lead.contacto.telefono);
+    lead.autoCampos = [];
     const s = D.store.servicio(lead.servicio);
     const faltan = D.matching.faltanObligatorios(lead, s);
     const contactado = lead.contactado || lead.llamadas.some(c => c.resultado === 'ok');
@@ -127,23 +128,90 @@ D.ops = (function () {
     return faltan;
   }
 
+  // Envía el lead a los proveedores indicados. Se puede enviar a uno que el algoritmo descarta:
+  // queda registrado con el aviso. Si el lead ya estaba enviado, añade los nuevos.
   function enviar(lead, ids) {
     const ev = D.matching.evaluar(lead, st());
     const ahora = new Date().toISOString();
     const enviados = [];
     for (const pid of ids) {
+      if (lead.envios.some(e => e.proveedorId === pid && e.estado === 'enviado')) continue;
+      const p = D.store.proveedor(pid); if (!p) continue;
       const c = ev.candidatos.find(x => x.p.id === pid);
-      if (!c) continue;
-      lead.envios.push({ proveedorId: pid, precio: c.precio, puntos: c.puntos, fecha: ahora, estado: 'enviado', canal: c.p.entrega, facturaId: null });
-      enviados.push(c);
+      const cfg = p.servicios.find(x => x.s === lead.servicio);
+      const precio = p.estado === 'prueba' ? 0 : (cfg ? cfg.cpl : (ev.servicio?.cplRef || 0));
+      const aviso = D.ops.avisoProveedor(ev, pid);
+      lead.envios.push({ proveedorId: pid, precio, puntos: c ? c.puntos : null, aviso, fecha: ahora, estado: 'enviado', canal: p.entrega, facturaId: null });
+      enviados.push(p);
     }
     if (!enviados.length) return [];
+    const activos = lead.envios.filter(e => e.estado === 'enviado').length;
     const s = ev.servicio;
-    if (s && enviados.length < s.maxProveedores) lead.motivoNoTriple = ev.motivoNoTriple || 'Decisión del comercial';
+    lead.motivoNoTriple = s && activos < s.maxProveedores ? (ev.motivoNoTriple || 'Decisión del comercial') : '';
+    const yaEnviado = lead.estado === 'enviado';
     lead.estado = 'enviado';
-    log(lead, `Enviado a ${enviados.map(c => c.p.nombre).join(', ')} (${u.eur(enviados.reduce((a, c) => a + c.precio, 0))})`);
+    log(lead, `${yaEnviado ? 'Añadido' : 'Enviado a'} ${enviados.map(p => p.nombre).join(', ')}`);
     D.store.guardar();
     return enviados;
+  }
+
+  // Motivo por el que el algoritmo no recomienda a un proveedor ('' si encaja).
+  function avisoProveedor(ev, pid) {
+    const c = ev.candidatos.find(x => x.p.id === pid);
+    if (c) return c.puntos < ev.umbral ? `Puntuación baja (${c.puntos})` : '';
+    const x = ev.excluidos.find(x => x.p.id === pid);
+    return x ? x.motivo : 'No ofrece este servicio';
+  }
+
+  // Quita un envío que no se ha facturado (no se cobra).
+  function anularEnvio(lead, pid) {
+    const e = lead.envios.find(x => x.proveedorId === pid && x.estado === 'enviado');
+    if (!e || e.facturaId) return false;
+    e.estado = 'anulado';
+    log(lead, `Quitado ${D.store.proveedor(pid).nombre}`);
+    if (!lead.envios.some(x => x.estado === 'enviado')) lead.estado = 'cualificado';
+    D.store.guardar();
+    return true;
+  }
+
+  // Primer WhatsApp al entrar el lead (texto provisional, pendiente de definir).
+  function bienvenida(lead) {
+    if (!st().config.waBienvenida || !u.telefonoValido(lead.contacto.telefono)) return;
+    const s = D.store.servicio(lead.servicio);
+    lead.mensajes.push({
+      fecha: lead.creado, canal: 'whatsapp', plantilla: 'bienvenida',
+      texto: `Hola ${lead.contacto.nombre}, hemos recibido tu solicitud${s ? ' de ' + s.nombre.toLowerCase() : ''} en Doiser. Un asesor te llamará en breve.`
+    });
+    lead.historial.push({ fecha: lead.creado, texto: 'WhatsApp de bienvenida enviado' });
+  }
+
+  // Simulación de la transcripción de la llamada y extracción de datos.
+  // En producción: grabación → voz a texto → IA que rellena el cuestionario.
+  function transcribir(lead) {
+    const s = D.store.servicio(lead.servicio);
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    const tipo = lead.empresa.tipoCliente || pick(s.tiposCliente);
+    const prov = lead.empresa.provincia || pick(['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Málaga', 'Zaragoza', 'Alicante']);
+    const empresa = lead.empresa.nombre || (tipo === 'Particular' ? '' : pick(D.NEGOCIOS));
+    const lineas = [
+      ['Asesor', `Hola, ¿hablo con ${lead.contacto.nombre}? Le llamo de Doiser por su solicitud de ${s.nombre.toLowerCase()}.`],
+      ['Cliente', 'Sí, soy yo, dígame.'],
+      ['Asesor', '¿Lo necesita como autónomo o para una empresa? ¿Y de dónde es?'],
+      ['Cliente', `${tipo === 'Empresa' ? `Es para la empresa, ${empresa}` : tipo === 'Autónomo' ? 'Soy autónomo' : 'Es para mí, particular'}. Estamos en ${prov}.`]
+    ];
+    const respuestas = {};
+    for (const q of s.preguntas) {
+      const v = lead.respuestas[q.id] !== undefined && lead.respuestas[q.id] !== '' ? lead.respuestas[q.id] : D.demo.respuestaAleatoria(Math.random, q, tipo);
+      respuestas[q.id] = v;
+      lineas.push(['Asesor', q.label.replace(/^¿?/, '¿').replace(/\??$/, '?')], ['Cliente', String(v)]);
+    }
+    lineas.push(['Asesor', 'Perfecto. Le pondremos en contacto con las empresas que mejor encajan. Le llamarán hoy o mañana.']);
+    lead.transcripcion = lineas;
+    lead.autoCampos = ['e.tipoCliente', 'e.provincia', ...(empresa && !lead.empresa.nombre ? ['e.nombre'] : []), ...Object.keys(respuestas).map(k => 'r.' + k)];
+    Object.assign(lead.empresa, { tipoCliente: tipo, provincia: prov, nombre: empresa });
+    lead.respuestas = Object.assign({}, lead.respuestas, respuestas);
+    log(lead, 'Llamada transcrita: cuestionario rellenado automáticamente');
+    D.store.guardar();
   }
 
   // El proveedor rechaza el lead (no se le factura).
@@ -182,5 +250,5 @@ D.ops = (function () {
     };
   }
 
-  return { registrarLlamada, invalidar, reabrir, guardarDatos, enviar, invalidarEnvio, mensajeProveedor, textoWhatsApp };
+  return { registrarLlamada, invalidar, reabrir, guardarDatos, enviar, avisoProveedor, anularEnvio, invalidarEnvio, bienvenida, transcribir, mensajeProveedor, textoWhatsApp };
 })();

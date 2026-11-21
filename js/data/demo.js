@@ -92,6 +92,7 @@ D.demo = (function () {
       lead.historial.forEach(h => { h.fecha = lead.creado; });
       lead.responsable = elegir(rnd, [['Dani', 1], ['Joan', 1], ['Marcel', 1]]);
       lead._perfil = { tipo, empresa: d.empresa };
+      D.ops.bienvenida(lead);
       state.leads.push(lead);
       return { lead, s };
     }

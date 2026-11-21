@@ -71,6 +71,7 @@ D.act.entradaEnviar = () => {
   if (v.fuente === 'web' && !d.rgpd) { D.ui.toast('Hay que aceptar la política de datos'); return; }
   const lead = D.ingest.recibir(v.fuente, D.demo.payload(v.fuente, d, D.store.servicio(v.servicio)), st);
   lead.responsable = st.config.usuario;
+  D.ops.bienvenida(lead);
   st.leads.unshift(lead);
   D.store.guardar();
   v.ultimo = lead.id;

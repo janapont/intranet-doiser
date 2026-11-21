@@ -12,6 +12,7 @@ D.views.config = {
         </div>
         <div class="card"><h2>Automatismos</h2>
           <label class="check" style="font-size:14px;color:var(--text);padding:6px 0"><input type="checkbox" data-change="cfgAuto" ${st.config.modoAuto ? 'checked' : ''}> Enviar automáticamente al cualificar</label>
+          <label class="check" style="font-size:14px;color:var(--text);padding:6px 0"><input type="checkbox" data-change="cfgWaB" ${st.config.waBienvenida ? 'checked' : ''}> WhatsApp de bienvenida al entrar el lead</label>
           <label class="check" style="font-size:14px;color:var(--text);padding:6px 0"><input type="checkbox" data-change="cfgWa" ${st.config.whatsapp ? 'checked' : ''}> WhatsApp si no contesta (cierra tras ${D.MAX_INTENTOS})</label>
           <div class="row" style="justify-content:space-between;margin-top:14px"><span>Usuario</span><select data-change="cfgUsuario" style="width:auto">${['Dani', 'Joan', 'Marcel', 'Ignasi', 'Òscar'].map(x => `<option ${x === st.config.usuario ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
           <div class="row" style="justify-content:space-between;margin-top:14px"><span>Datos de prueba</span><button class="btn" data-action="cfgReset">Reiniciar</button></div>
@@ -26,6 +27,7 @@ D.views.config = {
 };
 D.act.cfgPeso = el => { D.store.get().pesos[el.name] = Number(el.value); D.store.guardar(); D.render(); };
 D.act.cfgAuto = el => { D.store.get().config.modoAuto = el.checked; D.store.guardar();  };
+D.act.cfgWaB = el => { D.store.get().config.waBienvenida = el.checked; D.store.guardar(); };
 D.act.cfgWa = el => { D.store.get().config.whatsapp = el.checked; D.store.guardar(); };
 D.act.cfgUsuario = el => { D.store.get().config.usuario = el.value; D.store.guardar(); };
 D.act.cfgMax = el => { D.store.get().servicios[Number(el.dataset.i)].maxProveedores = Number(el.value); D.store.guardar(); D.ui.toast('Guardado'); };

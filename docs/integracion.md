@@ -22,7 +22,13 @@ El objetivo es que el gestor sea una sección nueva de la intranet, por ejemplo 
 
 En el navegador, solo hay que sustituir `js/core/store.js` por llamadas a esta API. Las pantallas y el motor no cambian.
 
-## 3. Orden propuesto
+## 3. Piezas nuevas pendientes de definir
+
+- **WhatsApp de bienvenida.** Se envía en cuanto entra un lead con un teléfono válido. Hay que definir el texto y que Meta apruebe la plantilla.
+- **Transcripción de la llamada.** Se graba la llamada, se pasa a texto y una IA rellena el cuestionario del servicio. Los campos rellenados así se marcan para que el comercial los revise antes de cualificar. Antes de grabar hay que avisar al cliente y obtener su consentimiento (RGPD), y elegir la telefonía (centralita con API o app de llamadas).
+- **Selección editable.** El comercial puede añadir o quitar proveedores de la propuesta, también después de enviar. Si elige uno que el algoritmo descarta, el envío queda registrado con el aviso. Los envíos quitados antes de facturar no se cobran.
+
+## 4. Orden propuesto
 
 1. Validar el prototipo con el equipo: cuestionarios, reglas del algoritmo, estados.
 2. Conseguir acceso al código y a la base de datos de la intranet, y definir las tablas `gl_`.
@@ -30,7 +36,7 @@ En el navegador, solo hay que sustituir `js/core/store.js` por llamadas a esta A
 4. Facturación conectada a Holded (primero en modo borrador).
 5. WhatsApp automático y conexión directa con Meta Lead Ads. Cuando funcionen, se puede dar de baja GoHighLevel.
 
-## 4. Accesos necesarios
+## 5. Accesos necesarios
 
 - Código y base de datos de la intranet (Toni o el hosting).
 - Holded: una clave de API, al principio en modo lectura o borrador.
